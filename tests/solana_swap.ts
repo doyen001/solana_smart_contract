@@ -1,25 +1,21 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { bs58 } from "@switchboard-xyz/common";
+import { BN } from "bn.js";
 
 
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Connection } from "@solana/web3.js";
 import { assert } from "chai";
 import { readFileSync } from "fs";
-// import { IDL } from "../target/idl/solana_swap.json";
 
 // Load the compiled program IDL (if using Anchor)
 const idl = JSON.parse(readFileSync("./target/idl/solana_swap.json", "utf8"));
-// const keypair = JSON.parse(readFileSync("./target/deploy/solana_swap-keypair.json", "utf8"));
+console.log("idl", idl);
 
-const loadKeypairFromEnv = () => {
-    const secretKeyArray = JSON.parse("AuP9xHutW9oDMDWFcaZDL9dY3RVB74ivF3pWiZcLhdRV");
-    console.log("test", secretKeyArray);
-    const secretKey = Uint8Array.from(secretKeyArray);
-    const keypair = Keypair.fromSecretKey(secretKey);
-    return keypair;
-  }
+function loadKeypairFromFile(path: string): Keypair {
+  const secretKey = JSON.parse(readFileSync(path, "utf-8"));
+  return Keypair.fromSecretKey(Uint8Array.from(secretKey));
+}
 
 describe("solana_swap", () => {
   // Set up provider and wallet
@@ -28,8 +24,7 @@ describe("solana_swap", () => {
   
 //   const program = anchor.workspace.SolanaSwap as Program<SolanaSwap>;
   const connection = new Connection("https://api.devnet.solana.com");
-  const keypair = loadKeypairFromEnv();
-  console.log("key", keypair);
+  const keypair = loadKeypairFromFile("/root/.config/solana/id.json");
   const wallet = new anchor.Wallet(keypair);
   const provider = new AnchorProvider(connection, wallet, { commitment: "processed" });
   anchor.setProvider(provider);
@@ -57,10 +52,7 @@ describe("solana_swap", () => {
 
   before(async () => {
       // Generate a new keypair for the user
-      user = anchor.web3.Keypair.fromSecretKey(new Uint8Array(JSON.parse("4HJd2S7eMBKkySbif3VfNLgsiQyTkqgf9FnSYweKkC3d")));
-      console.log('player: ', user.publicKey.toBase58());
-    //   user = new keypair("4HJd2S7eMBKkySbif3VfNLgsiQyTkqgf9FnSYweKkC3d");
-
+      user = loadKeypairFromFile("/root/.config/solana/id.json");
 
       // Replace with actual values
       tokenMint = new PublicKey("7XzRGykBc7F566G9nXKBLWfuKgbizSbEyNgHVNLpeLDv");  // token mint address
@@ -68,18 +60,14 @@ describe("solana_swap", () => {
 
       const poolAddress = await getPoolAddress(tokenMint, program);
       pool = new PublicKey("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");  
+
   });
 
   it("Performs a SOL to Token Swap", async () => {
     const authCode = "SECRET_AUTH_CODE"; // Simulated authentication
-    const amount = new anchor.BN(1_000_000);  // Amount in lamports (0.001 SOL)
-    console.log("am", amount);
+    const amount = new BN(1_000_000);  // Amount in lamports (0.001 SOL)
     const slippage = 1;        
-    const fee = new anchor.BN(10_000);
-
-    // Airdrop SOL to the test wallet
-    await provider.connection.requestAirdrop(wallet.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL);
-    console.log("fee", fee);
+    const fee = new BN(10_000);
 
     try {
         // Call the swap instruction
